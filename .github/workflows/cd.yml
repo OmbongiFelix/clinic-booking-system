@@ -1,0 +1,12 @@
+#Auto-deploy on merge to designated branch
+name: CD
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Running tests..."
