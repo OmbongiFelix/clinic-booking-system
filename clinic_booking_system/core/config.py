@@ -1,13 +1,8 @@
-r"""Settings from environment
+# core/config.py
+"""Centralized runtime configuration, read once from the environment.
 
-
-Centralized runtime configuration for the Locus service.
-
-Reads environment variables once into a cached Settings object so the
-rest of the codebase never calls python-dotenv directly.
+The rest of the codebase calls ``get_settings()``; nothing else reads env vars.
 """
-
-"""Centralized runtime configuration, read once from the environment."""
 
 from functools import lru_cache
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -21,16 +16,24 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
-    ENVIRONMENT: str = "local"
+    APP_ENV: str = "local"  # README §20
     LOG_LEVEL: str = "INFO"
 
     # Required: no default, so a missing value fails at startup.
     DATABASE_URL: str
 
-    # Scheduling rules
+    # Scheduling rules (README A1, A5). No booking horizon (A12).
     CLINIC_TIMEZONE: str = "Africa/Nairobi"
     MIN_BOOKING_LEAD_MINUTES: int = Field(default=60, ge=0)
-    BOOKING_HORIZON_DAYS: int = Field(default=30, ge=1)
+
+    @field_validator("DATABASE_URL")
+    @classmethod
+    def _use_asyncpg_driver(cls, v: str) -> str:
+        """Render supplies postgres:// or postgresql://; SQLAlchemy async needs +asyncpg (README §12)."""
+        for prefix in ("postgres://", "postgresql://"):
+            if v.startswith(prefix):
+                return "postgresql+asyncpg://" + v[len(prefix):]
+        return v
 
     @field_validator("CLINIC_TIMEZONE")
     @classmethod
