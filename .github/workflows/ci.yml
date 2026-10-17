@@ -1,12 +1,62 @@
-#	CI runs tests on every PR
+# CI workflow: run lint and tests on every pull request to main (README §18.2, R12).
+#
+# Steps:
+# 1. Check out the repository.
+# 2. Install Python and uv.
+# 3. Install all dependencies (including dev group) from the lockfile.
+# 4. Run the PostgreSQL service container used by integration tests.
+# 5. Apply database migrations.
+# 6. Run the full test suite with pytest.
+
 name: CI
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: clinic_db_test
+          POSTGRES_USER: clinic_user
+          POSTGRES_PASSWORD: clinic_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://clinic_user:clinic_pass@localhost:5432/clinic_db_test
+      CLINIC_TIMEZONE: Africa/Nairobi
+      MIN_BOOKING_LEAD_MINUTES: "60"
+      APP_ENV: test
+      LOG_LEVEL: WARNING
+
     steps:
-      - run: echo "Running tests..."
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Apply migrations
+        run: uv run alembic upgrade head
+
+      - name: Run tests
+        run: uv run pytest clinic_booking_system/tests/ -v
