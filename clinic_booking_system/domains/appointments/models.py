@@ -1,19 +1,18 @@
-#domains/appointments/models.py
-
-"""
-Domain models for appointments
-
-Plain  representing core domain entities.
-No FastAPI, Python dataclasses, Pydantic, 
-Decided to use sqlalchemy's MappedAsDataclass due to its low overhead and native support 
-for ORM relationship --ditched python dataclasses since Mapped uses it under the hood
-Relationships:
-    One patient can book multiple appointments but each appointment belongs to exacly one patient
-    One doctor can attend to multiple appointments but each appointment can be attended by one doctor
-
-"""
-
 # domains/appointments/models.py
+"""
+Persistence model for appointments (README §11).
+
+SQLAlchemy's MappedAsDataclass is used for its low overhead and native support
+for ORM relationships (Mapped already builds on dataclasses). This is the
+persistence layer only: the API contract lives in schemas.py.
+
+Relationships:
+    One patient can book many appointments; each appointment has exactly one patient.
+    One doctor can attend many appointments; each appointment has exactly one doctor.
+
+The 30-minute duration is a code constant (scheduling.SLOT_MINUTES), so no end_time is stored.
+"""
+
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
@@ -25,17 +24,21 @@ from clinic_booking_system.database.db import Base
 if TYPE_CHECKING:
     from clinic_booking_system.domains.doctors.models import Doctor
     from clinic_booking_system.domains.patients.models import Patient
- 
+
+STATUS_BOOKED = "booked"
+STATUS_CANCELLED = "cancelled"
 
 
-
-# -------------------------------------------------- domains/appointments/models.py
 class Appointment(Base):
     __tablename__ = "appointments"
     __table_args__ = (
-        CheckConstraint("status IN ('booked','cancelled')", name="ck_appointments_status"),
         CheckConstraint(
-            "status = 'booked' OR (cancellation_reason IS NOT NULL AND cancelled_at IS NOT NULL)",
+            f"status IN ('{STATUS_BOOKED}','{STATUS_CANCELLED}')",
+            name="ck_appointments_status",
+        ),
+        CheckConstraint(
+            f"status = '{STATUS_BOOKED}' OR "
+            "(cancellation_reason IS NOT NULL AND cancelled_at IS NOT NULL)",
             name="ck_appointments_cancel_fields",
         ),
         # The exclusivity guarantee: one *booked* appointment per doctor per slot.
@@ -44,24 +47,25 @@ class Appointment(Base):
             "doctor_id",
             "start_time",
             unique=True,
-            postgresql_where=text("status = 'booked'"),
+            postgresql_where=text(f"status = '{STATUS_BOOKED}'"),
         ),
         Index("ix_appointments_patient_start", "patient_id", "start_time"),
     )
-    # Make server-generated timestamps available right after flush (important for async).
+    # Server-generated timestamps are available right after flush (important for async).
     __mapper_args__ = {"eager_defaults": True}
- 
+
     id: Mapped[int] = mapped_column(primary_key=True, init=False)
     doctor_id: Mapped[int] = mapped_column(ForeignKey("doctors.id", ondelete="RESTRICT"))
     patient_id: Mapped[int] = mapped_column(ForeignKey("patients.id", ondelete="RESTRICT"))
     start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))  # always UTC-aware
- 
-    status: Mapped[str] = mapped_column(String(20), default="booked")
-    cancellation_reason: Mapped[Optional[str]] = mapped_column(String(255), default=None)
+
+    status: Mapped[str] = mapped_column(String(20), default=STATUS_BOOKED)
+    # 500 chars to match the API limit (README §13.3); was 255.
+    cancellation_reason: Mapped[Optional[str]] = mapped_column(String(500), default=None)
     cancelled_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), default=None
     )
- 
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), init=False, server_default=func.now()
     )
@@ -71,7 +75,7 @@ class Appointment(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
- 
+
     doctor: Mapped["Doctor"] = relationship(
         back_populates="appointments", init=False, repr=False
     )
