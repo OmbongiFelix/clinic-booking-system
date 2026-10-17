@@ -12,7 +12,7 @@ dependencies = [
     "asyncpg>=0.32.0",
     "fastapi>=0.143.2",
     "pydantic-settings>=2.0",
-    "sqlalchemy>=2.1.4",
+    "sqlalchemy[asyncio]>=2.1.4",
     "tzdata",
     "uvicorn[standard]>=0.54.0",
 ]
