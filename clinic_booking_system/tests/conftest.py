@@ -68,7 +68,7 @@ async def session(engine):
         bind=connection,
         expire_on_commit=False,
         class_=AsyncSession,
-        join_transaction_mode="create_savepoint",  # Prevents test commits from hitting the DB
+        #join_transaction_mode="create_savepoint",  # DO NOT USE IN PRODUCTION. Prevents test commits from hitting the DB. 
     )
     async with session_factory() as s:
         yield s
