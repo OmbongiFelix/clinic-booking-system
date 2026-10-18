@@ -31,7 +31,7 @@ def _make_session_factory() -> async_sessionmaker[AsyncSession]:
         # Echo SQL only in local/debug mode, not in production.
         echo=(settings.APP_ENV == "local"),
         future=True,
-        poolclass=NullPool, #i added this after  integration tests failed
+        #poolclass=NullPool, i added this after  integration tests failed. use in testing, avoid in production
     )
     return async_sessionmaker(
         engine,

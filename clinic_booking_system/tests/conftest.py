@@ -68,9 +68,11 @@ async def session(engine):
         bind=connection,
         expire_on_commit=False,
         class_=AsyncSession,
+        join_transaction_mode="create_savepoint",  # Prevents test commits from hitting the DB
     )
     async with session_factory() as s:
         yield s
+        await s.rollback() # Ensures clean state for the next test
 
     await transaction.rollback()
     await connection.close()
