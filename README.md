@@ -17,10 +17,10 @@ A REST API that lets patients of a small clinic (5 doctors, 30-minute slots) see
 
 | Item | Value |
 |---|---|
-| Repository | `https://github.com/OmbongiFelix/clinic-booking-system` |
-| Public URL | `https://clinic-booking-system-2jtx.onrender.com/` |
-| Interactive API docs | `<public URL>/docs` (FastAPI default) **[Designed]** |
-| Deployment branch | `main` **[Designed]** |
+| Repository | https://github.com/OmbongiFelix/clinic-booking-system|
+| Public URL | https://clinic-booking-system-2jtx.onrender.com |
+| Interactive API docs | https://clinic-booking-system-2jtx.onrender.com/docs (FastAPI default)|
+| Deployment branch | `main`  |
 | Deploy trigger | Merge (push) to `main` runs `cd.yml`: tests, then Render deploy hook, then `/health` smoke test **[Designed]** |
 | PR checks | `ci.yml` runs lint and tests on every pull request **[Designed]** |
 | Seeded IDs for trying the API | Doctors `1`–`5`, patients `1`–`3` **[Designed]** (see §19) |
