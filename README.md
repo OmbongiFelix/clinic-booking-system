@@ -17,8 +17,8 @@ A REST API that lets patients of a small clinic (5 doctors, 30-minute slots) see
 
 | Item | Value |
 |---|---|
-| Repository | `<TO BE ADDED: repository URL>` |
-| Public URL | `<TO BE ADDED after deployment>` |
+| Repository | `https://github.com/OmbongiFelix/clinic-booking-system` |
+| Public URL | `https://clinic-booking-system-2jtx.onrender.com/` |
 | Interactive API docs | `<public URL>/docs` (FastAPI default) **[Designed]** |
 | Deployment branch | `main` **[Designed]** |
 | Deploy trigger | Merge (push) to `main` runs `cd.yml`: tests, then Render deploy hook, then `/health` smoke test **[Designed]** |
