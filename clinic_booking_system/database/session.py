@@ -19,6 +19,7 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 
 def _make_session_factory() -> async_sessionmaker[AsyncSession]:
@@ -30,6 +31,7 @@ def _make_session_factory() -> async_sessionmaker[AsyncSession]:
         # Echo SQL only in local/debug mode, not in production.
         echo=(settings.APP_ENV == "local"),
         future=True,
+        poolclass=NullPool, #i added this after  integration tests failed
     )
     return async_sessionmaker(
         engine,
