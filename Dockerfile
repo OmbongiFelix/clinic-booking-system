@@ -36,4 +36,4 @@ ENV PATH="/home/clinic/app/.venv/bin:$PATH"
 
 # Run Alembic migrations then start the server.
 # Migrations at container start are acceptable for a single instance (README §18.1).
-CMD ["sh", "-c", "alembic upgrade head && uvicorn clinic_booking_system.main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "uv run alembic upgrade head && uv run uvicorn clinic_booking_system.main:app --host 0.0.0.0 --port 8000"]
