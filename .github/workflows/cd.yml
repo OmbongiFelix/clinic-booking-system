@@ -63,7 +63,7 @@ jobs:
         run: uv run pytest clinic_booking_system/tests/ -v
 
       - name: Deploy to Render
-        # Only deploy if tests pass; RENDER_DEPLOY_HOOK_URL is a repository secret.
+        # Only deploy if tests pass; RENDER_DEPLOY_HOOK_URL is a repository secret..
         run: curl -s "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
 
       - name: Smoke test — poll /health
