@@ -14,10 +14,9 @@ lives in ``api/`` and ``domains/`` — this file is **composition only**:
 
 # Ensure all ORM model classes are imported and registered with Base.metadata
 # before anything else (Alembic env.py and the session pool rely on this).
-import clinic_booking_system.database.models_registry  # noqa: F401
-
 from fastapi import FastAPI
 
+import clinic_booking_system.database.models_registry  # noqa: F401
 from clinic_booking_system.api.router import router
 from clinic_booking_system.core.errors import register_exception_handlers
 

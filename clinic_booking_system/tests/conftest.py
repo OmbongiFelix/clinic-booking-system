@@ -16,25 +16,24 @@ Async tests use ``pytest-asyncio`` with ``asyncio_mode = "auto"`` (set in
 
 from __future__ import annotations
 
-import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+import clinic_booking_system.database.models_registry  # noqa: F401 — register all models
 from clinic_booking_system.core.clock import get_now
 from clinic_booking_system.core.config import get_settings
 from clinic_booking_system.database.db import Base
-import clinic_booking_system.database.models_registry  # noqa: F401 — register all models
-from clinic_booking_system.main import app
 from clinic_booking_system.database.session import get_session
-
+from clinic_booking_system.main import app
 
 # ---------------------------------------------------------------------------
 # Database fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session")
 def anyio_backend():
@@ -69,10 +68,10 @@ async def session(engine):
         expire_on_commit=False,
         class_=AsyncSession,
         join_transaction_mode="create_savepoint",
-        )
+    )
     async with session_factory() as s:
         yield s
-        await s.rollback() # Ensures clean state for the next test
+        await s.rollback()  # Ensures clean state for the next test
 
     await transaction.rollback()
     await connection.close()
@@ -82,13 +81,14 @@ async def session(engine):
 # Seeded-data fixtures (used by integration tests)
 # ---------------------------------------------------------------------------
 
+
 @pytest_asyncio.fixture()
 async def seeded_db(session):
     """Seed minimal doctor, working-hours and patient rows for integration tests.
 
     Returns a dict with ``doctor_id`` and ``patient_id`` for use in tests.
     """
-    from datetime import time
+
     from sqlalchemy import text
 
     # Insert a doctor
@@ -127,28 +127,50 @@ async def seeded_db(session):
 @pytest_asyncio.fixture()
 async def committed_seed(engine):
     from sqlalchemy import text
+
     async with engine.begin() as conn:  # commits on exit
-        doctor_id = (await conn.execute(text(
-            "INSERT INTO doctors (fullname, is_active) VALUES ('Dr. Race', true) RETURNING id"
-        ))).scalar_one()
+        doctor_id = (
+            await conn.execute(
+                text(
+                    "INSERT INTO doctors (fullname, is_active) VALUES ('Dr. Race', true) RETURNING id"
+                )
+            )
+        ).scalar_one()
         for wd in range(5):
-            await conn.execute(text(
-                "INSERT INTO doctor_working_hours (doctor_id, weekday, start_time, end_time) "
-                "VALUES (:d, :w, '09:00', '17:00')"), {"d": doctor_id, "w": wd})
-        patient_id = (await conn.execute(text(
-            "INSERT INTO patients (fullname, email, phone) "
-            "VALUES ('Race Patient', 'race@example.com', '+1234567891') RETURNING id"
-        ))).scalar_one()
+            await conn.execute(
+                text(
+                    "INSERT INTO doctor_working_hours (doctor_id, weekday, start_time, end_time) "
+                    "VALUES (:d, :w, '09:00', '17:00')"
+                ),
+                {"d": doctor_id, "w": wd},
+            )
+        patient_id = (
+            await conn.execute(
+                text(
+                    "INSERT INTO patients (fullname, email, phone) "
+                    "VALUES ('Race Patient', 'race@example.com', '+1234567891') RETURNING id"
+                )
+            )
+        ).scalar_one()
     yield {"doctor_id": doctor_id, "patient_id": patient_id}
     async with engine.begin() as conn:
-        await conn.execute(text("DELETE FROM appointments WHERE doctor_id = :d"), {"d": doctor_id})
-        await conn.execute(text("DELETE FROM doctor_working_hours WHERE doctor_id = :d"), {"d": doctor_id})
+        await conn.execute(
+            text("DELETE FROM appointments WHERE doctor_id = :d"), {"d": doctor_id}
+        )
+        await conn.execute(
+            text("DELETE FROM doctor_working_hours WHERE doctor_id = :d"),
+            {"d": doctor_id},
+        )
         await conn.execute(text("DELETE FROM doctors WHERE id = :d"), {"d": doctor_id})
-        await conn.execute(text("DELETE FROM patients WHERE id = :p"), {"p": patient_id})
+        await conn.execute(
+            text("DELETE FROM patients WHERE id = :p"), {"p": patient_id}
+        )
+
 
 # ---------------------------------------------------------------------------
 # HTTP client fixture
 # ---------------------------------------------------------------------------
+
 
 @pytest_asyncio.fixture()
 async def client(session):
@@ -159,7 +181,7 @@ async def client(session):
     """
     # Use a fixed "now" well in the past relative to test slot times so
     # tests that check booking rules always have enough lead time.
-    fixed_now = datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    fixed_now = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
 
     async def _override_session():
         yield session

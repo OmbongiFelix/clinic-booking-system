@@ -61,11 +61,15 @@ async def get_availability(
         doctor_id=doctor_id,
         date=day,
         timezone=get_settings().CLINIC_TIMEZONE,
-        slots=[SlotResponse(start_time=s.start_time, end_time=s.end_time) for s in slots],
+        slots=[
+            SlotResponse(start_time=s.start_time, end_time=s.end_time) for s in slots
+        ],
     )
 
 
-@router.patch("/appointments/{appointment_id}/cancel", response_model=AppointmentResponse)
+@router.patch(
+    "/appointments/{appointment_id}/cancel", response_model=AppointmentResponse
+)
 async def cancel_appointment(
     body: AppointmentCancellationRequest,
     appointment_id: int = Path(gt=0),
@@ -76,18 +80,24 @@ async def cancel_appointment(
     return AppointmentResponse.from_appointment(appt)
 
 
-@router.patch("/appointments/{appointment_id}/reschedule", response_model=AppointmentResponse)
+@router.patch(
+    "/appointments/{appointment_id}/reschedule", response_model=AppointmentResponse
+)
 async def reschedule_appointment(
     body: AppointmentRescheduleRequest,
     appointment_id: int = Path(gt=0),
     service: AppointmentService = Depends(get_service),
     now: datetime = Depends(get_now),
 ) -> AppointmentResponse:
-    appt = await service.reschedule(appointment_id, body.start_time, body.doctor_id, now)
+    appt = await service.reschedule(
+        appointment_id, body.start_time, body.doctor_id, now
+    )
     return AppointmentResponse.from_appointment(appt)
 
 
-@router.get("/patients/{patient_id}/appointments", response_model=list[AppointmentResponse])
+@router.get(
+    "/patients/{patient_id}/appointments", response_model=list[AppointmentResponse]
+)
 async def list_patient_appointments(
     patient_id: int = Path(gt=0),
     service: AppointmentService = Depends(get_service),

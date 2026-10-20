@@ -19,16 +19,17 @@ Key constraints:
 
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "0001_initial"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -48,7 +49,9 @@ def upgrade() -> None:
         "doctors",
         sa.Column("id", sa.BigInteger(), nullable=False),
         sa.Column("fullname", sa.String(255), nullable=False),
-        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")
+        ),
         sa.PrimaryKeyConstraint("id", name="pk_doctors"),
     )
 
@@ -62,11 +65,14 @@ def upgrade() -> None:
         sa.Column("end_time", sa.Time(), nullable=False),
         sa.PrimaryKeyConstraint("id", name="pk_doctor_working_hours"),
         sa.ForeignKeyConstraint(
-            ["doctor_id"], ["doctors.id"],
+            ["doctor_id"],
+            ["doctors.id"],
             name="fk_working_hours_doctor",
             ondelete="CASCADE",
         ),
-        sa.UniqueConstraint("doctor_id", "weekday", name="uq_working_hours_doctor_weekday"),
+        sa.UniqueConstraint(
+            "doctor_id", "weekday", name="uq_working_hours_doctor_weekday"
+        ),
         sa.CheckConstraint("weekday BETWEEN 0 AND 6", name="ck_working_hours_weekday"),
         sa.CheckConstraint("start_time < end_time", name="ck_working_hours_range"),
     )
@@ -95,12 +101,14 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name="pk_appointments"),
         sa.ForeignKeyConstraint(
-            ["doctor_id"], ["doctors.id"],
+            ["doctor_id"],
+            ["doctors.id"],
             name="fk_appointments_doctor",
             ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(
-            ["patient_id"], ["patients.id"],
+            ["patient_id"],
+            ["patients.id"],
             name="fk_appointments_patient",
             ondelete="RESTRICT",
         ),

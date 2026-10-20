@@ -14,7 +14,9 @@ from .models import Appointment
 from .scheduling import slot_end
 
 # Trimmed, 1-500 characters (README §13.3).
-CancelReason = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
+CancelReason = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)
+]
 
 
 class AppointmentRequest(BaseModel):
@@ -34,7 +36,9 @@ class AppointmentCancellationRequest(BaseModel):
 class AppointmentRescheduleRequest(BaseModel):
     """Body for PATCH /appointments/{id}/reschedule. ``doctor_id`` defaults to the current doctor (A9)."""
 
-    start_time: AwareDatetime = Field(description="New start time, ISO 8601 with offset")
+    start_time: AwareDatetime = Field(
+        description="New start time, ISO 8601 with offset"
+    )
     doctor_id: int | None = Field(default=None, gt=0)
 
 
@@ -50,7 +54,7 @@ class AppointmentResponse(BaseModel):
     created_at: datetime
 
     @classmethod
-    def from_appointment(cls, appt: Appointment) -> "AppointmentResponse":
+    def from_appointment(cls, appt: Appointment) -> AppointmentResponse:
         tz = get_settings().clinic_tz
         return cls(
             id=appt.id,
@@ -60,7 +64,9 @@ class AppointmentResponse(BaseModel):
             end_time=slot_end(appt.start_time).astimezone(tz),
             status=appt.status,
             cancellation_reason=appt.cancellation_reason,
-            cancelled_at=appt.cancelled_at.astimezone(tz) if appt.cancelled_at else None,
+            cancelled_at=appt.cancelled_at.astimezone(tz)
+            if appt.cancelled_at
+            else None,
             created_at=appt.created_at.astimezone(tz),
         )
 

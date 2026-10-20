@@ -1,4 +1,4 @@
-#domains/appointments/service.py
+# domains/appointments/service.py
 # domains/appointments/service.py
 """Appointment business logic (README §7, §13, §14).
 
@@ -15,8 +15,8 @@ NotFound error from core.errors:
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
-from typing import Sequence
+from collections.abc import Sequence
+from datetime import UTC, date, datetime
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -61,7 +61,7 @@ class AppointmentService:
             lead_minutes=self._settings.MIN_BOOKING_LEAD_MINUTES,
             tz=self._settings.clinic_tz,
         )
-        return start_time.astimezone(timezone.utc)
+        return start_time.astimezone(UTC)
 
     async def _get_changeable(self, appointment_id: int, now: datetime) -> Appointment:
         """Lock the row and enforce: 404 -> 409 cancelled -> 409 already started."""
@@ -69,7 +69,9 @@ class AppointmentService:
         if appt is None:
             raise AppointmentNotFound(details={"appointment_id": appointment_id})
         if appt.status != STATUS_BOOKED:
-            raise AppointmentAlreadyCancelled(details={"appointment_id": appointment_id})
+            raise AppointmentAlreadyCancelled(
+                details={"appointment_id": appointment_id}
+            )
         if appt.start_time <= now:
             raise AppointmentAlreadyStarted(details={"appointment_id": appointment_id})
         return appt
@@ -86,13 +88,20 @@ class AppointmentService:
         try:
             start_utc = await self._validated_utc_start(doctor_id, start_time, now)
             await patients_service.get_patient(self._session, patient_id)  # 404
-            appt = Appointment(doctor_id=doctor_id, patient_id=patient_id, start_time=start_utc)
+            appt = Appointment(
+                doctor_id=doctor_id, patient_id=patient_id, start_time=start_utc
+            )
             try:
-                await self._repo.add(appt)  # flush inside try: unique index decides "taken"
+                await self._repo.add(
+                    appt
+                )  # flush inside try: unique index decides "taken"
             except IntegrityError as exc:
                 if _is_slot_conflict(exc):
                     raise SlotUnavailable(
-                        details={"doctor_id": doctor_id, "start_time": start_time.isoformat()}
+                        details={
+                            "doctor_id": doctor_id,
+                            "start_time": start_time.isoformat(),
+                        }
                     ) from exc
                 raise
             return await self._commit(appt)
@@ -100,7 +109,9 @@ class AppointmentService:
             await self._session.rollback()
             raise
 
-    async def cancel(self, appointment_id: int, reason: str, now: datetime) -> Appointment:
+    async def cancel(
+        self, appointment_id: int, reason: str, now: datetime
+    ) -> Appointment:
         try:
             appt = await self._get_changeable(appointment_id, now)
             appt.status = STATUS_CANCELLED
@@ -133,7 +144,10 @@ class AppointmentService:
             except IntegrityError as exc:
                 if _is_slot_conflict(exc):
                     raise SlotUnavailable(
-                        details={"doctor_id": new_doctor_id, "start_time": start_time.isoformat()}
+                        details={
+                            "doctor_id": new_doctor_id,
+                            "start_time": start_time.isoformat(),
+                        }
                     ) from exc
                 raise
             return await self._commit(appt)
@@ -144,7 +158,9 @@ class AppointmentService:
     async def availability(
         self, doctor_id: int, day: date, now: datetime
     ) -> list[scheduling.Slot]:
-        hours = list(await doctors_service.get_working_hours(self._session, doctor_id))  # 404
+        hours = list(
+            await doctors_service.get_working_hours(self._session, doctor_id)
+        )  # 404
         tz = self._settings.clinic_tz
         day_start, day_end = scheduling.day_bounds_utc(day, tz)
         booked = await self._repo.booked_starts(doctor_id, day_start, day_end)
@@ -157,6 +173,8 @@ class AppointmentService:
             tz=tz,
         )
 
-    async def upcoming_for_patient(self, patient_id: int, now: datetime) -> Sequence[Appointment]:
+    async def upcoming_for_patient(
+        self, patient_id: int, now: datetime
+    ) -> Sequence[Appointment]:
         await patients_service.get_patient(self._session, patient_id)  # 404
         return await self._repo.upcoming_for_patient(patient_id, now)

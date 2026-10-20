@@ -22,7 +22,7 @@ day, unknown doctor → 404.
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -33,10 +33,12 @@ pytestmark = pytest.mark.asyncio
 # Helper: next occurrence of a given weekday from a reference date
 # ---------------------------------------------------------------------------
 
+
 def _next_weekday(weekday: int, ref: datetime) -> datetime:
     """Return a datetime on the next occurrence of ``weekday`` (0=Mon) at 10:00 clinic time."""
-    from datetime import date, timedelta
+    from datetime import timedelta
     from zoneinfo import ZoneInfo
+
     TZ = ZoneInfo("Africa/Nairobi")
     today = ref.astimezone(TZ).date()
     days_ahead = (weekday - today.weekday()) % 7 or 7
@@ -45,6 +47,7 @@ def _next_weekday(weekday: int, ref: datetime) -> datetime:
 
 
 # ── Booking ─────────────────────────────────────────────────────────────────
+
 
 class TestBookAppointment:
     async def test_happy_path(self, client, seeded_db):
@@ -68,7 +71,11 @@ class TestBookAppointment:
     async def test_unknown_doctor(self, client, seeded_db):
         resp = await client.post(
             "/appointments",
-            json={"patient_id": seeded_db["patient_id"], "doctor_id": 99999, "start_time": "2026-10-19T10:00:00+03:00"},
+            json={
+                "patient_id": seeded_db["patient_id"],
+                "doctor_id": 99999,
+                "start_time": "2026-10-19T10:00:00+03:00",
+            },
         )
         assert resp.status_code == 404
         assert resp.json()["error"]["code"] == "DOCTOR_NOT_FOUND"
@@ -76,7 +83,11 @@ class TestBookAppointment:
     async def test_unknown_patient(self, client, seeded_db):
         resp = await client.post(
             "/appointments",
-            json={"patient_id": 99999, "doctor_id": seeded_db["doctor_id"], "start_time": "2026-10-19T10:00:00+03:00"},
+            json={
+                "patient_id": 99999,
+                "doctor_id": seeded_db["doctor_id"],
+                "start_time": "2026-10-19T10:00:00+03:00",
+            },
         )
         assert resp.status_code == 404
         assert resp.json()["error"]["code"] == "PATIENT_NOT_FOUND"
@@ -198,6 +209,7 @@ class TestBookAppointment:
 
 # ── Cancel ───────────────────────────────────────────────────────────────────
 
+
 class TestCancelAppointment:
     async def _book(self, client, seeded_db, slot="2026-10-22T10:00:00+03:00"):
         resp = await client.post(
@@ -248,14 +260,13 @@ class TestCancelAppointment:
         assert resp.json()["error"]["code"] == "APPOINTMENT_ALREADY_CANCELLED"
 
     async def test_unknown_id(self, client, seeded_db):
-        resp = await client.patch(
-            "/appointments/99999/cancel", json={"reason": "test"}
-        )
+        resp = await client.patch("/appointments/99999/cancel", json={"reason": "test"})
         assert resp.status_code == 404
         assert resp.json()["error"]["code"] == "APPOINTMENT_NOT_FOUND"
 
 
 # ── Reschedule ───────────────────────────────────────────────────────────────
+
 
 class TestRescheduleAppointment:
     async def _book(self, client, seeded_db, slot):
@@ -272,7 +283,9 @@ class TestRescheduleAppointment:
 
     async def test_happy_path(self, client, seeded_db):
         """Old slot freed, new slot taken atomically."""
-        appt_id = await self._book(client, seeded_db, "2026-11-02T10:00:00+03:00")  # Mon
+        appt_id = await self._book(
+            client, seeded_db, "2026-11-02T10:00:00+03:00"
+        )  # Mon
         resp = await client.patch(
             f"/appointments/{appt_id}/reschedule",
             json={"start_time": "2026-11-02T11:00:00+03:00"},
@@ -293,7 +306,9 @@ class TestRescheduleAppointment:
         assert resp2.status_code == 201
 
     async def test_same_slot_rejected(self, client, seeded_db):
-        appt_id = await self._book(client, seeded_db, "2026-11-03T10:00:00+03:00")  # Tue
+        appt_id = await self._book(
+            client, seeded_db, "2026-11-03T10:00:00+03:00"
+        )  # Tue
         resp = await client.patch(
             f"/appointments/{appt_id}/reschedule",
             json={"start_time": "2026-11-03T10:00:00+03:00"},
@@ -302,10 +317,10 @@ class TestRescheduleAppointment:
         assert resp.json()["error"]["code"] == "SAME_SLOT"
 
     async def test_cancelled_appointment_rejected(self, client, seeded_db):
-        appt_id = await self._book(client, seeded_db, "2026-11-04T10:00:00+03:00")  # Wed
-        await client.patch(
-            f"/appointments/{appt_id}/cancel", json={"reason": "reason"}
-        )
+        appt_id = await self._book(
+            client, seeded_db, "2026-11-04T10:00:00+03:00"
+        )  # Wed
+        await client.patch(f"/appointments/{appt_id}/cancel", json={"reason": "reason"})
         resp = await client.patch(
             f"/appointments/{appt_id}/reschedule",
             json={"start_time": "2026-11-04T11:00:00+03:00"},
@@ -335,7 +350,9 @@ class TestRescheduleAppointment:
         assert any("10:00" in s for s in starts)
 
     async def test_new_slot_violates_rules(self, client, seeded_db):
-        appt_id = await self._book(client, seeded_db, "2026-11-09T10:00:00+03:00")  # Mon
+        appt_id = await self._book(
+            client, seeded_db, "2026-11-09T10:00:00+03:00"
+        )  # Mon
         resp = await client.patch(
             f"/appointments/{appt_id}/reschedule",
             json={"start_time": "2026-11-08T10:00:00+03:00"},  # Sunday
@@ -345,6 +362,7 @@ class TestRescheduleAppointment:
 
 
 # ── Patient list ──────────────────────────────────────────────────────────────
+
 
 class TestPatientAppointments:
     async def test_upcoming_sorted_ascending(self, client, seeded_db):
@@ -376,7 +394,8 @@ class TestPatientAppointments:
         )
         appt_id = resp.json()["id"]
         await client.patch(
-            f"/appointments/{appt_id}/cancel", json={"reason": "cancelled for list test"}
+            f"/appointments/{appt_id}/cancel",
+            json={"reason": "cancelled for list test"},
         )
 
         resp = await client.get(f"/patients/{seeded_db['patient_id']}/appointments")
@@ -390,6 +409,7 @@ class TestPatientAppointments:
 
 
 # ── Availability ──────────────────────────────────────────────────────────────
+
 
 class TestAvailability:
     async def test_returns_slots_for_working_day(self, client, seeded_db):
@@ -440,6 +460,7 @@ class TestAvailability:
 
 # ── Health ────────────────────────────────────────────────────────────────────
 
+
 class TestHealth:
     async def test_health_ok(self, client, seeded_db):
         resp = await client.get("/health")
@@ -449,21 +470,26 @@ class TestHealth:
 
 # ── Concurrency ───────────────────────────────────────────────────────────────
 
+
 class TestConcurrency:
     """Two simultaneous bookings for the same slot: exactly one succeeds (README §17)."""
 
     async def test_simultaneous_bookings_one_wins(self, committed_seed, engine):
         """Fire two bookings concurrently; exactly one 201 and one 409."""
         from httpx import ASGITransport, AsyncClient
+
         from clinic_booking_system.core.clock import get_now
         from clinic_booking_system.database.session import get_session
         from clinic_booking_system.main import app
 
-        fixed_now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        fixed_now = datetime(2026, 1, 1, tzinfo=UTC)
 
         async def _make_client():
             from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-            session_factory = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+
+            session_factory = async_sessionmaker(
+                engine, expire_on_commit=False, class_=AsyncSession
+            )
 
             async def _session():
                 async with session_factory() as s:

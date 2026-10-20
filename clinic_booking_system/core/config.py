@@ -32,7 +32,7 @@ class Settings(BaseSettings):
         """Render supplies postgres:// or postgresql://; SQLAlchemy async needs +asyncpg (README §12)."""
         for prefix in ("postgres://", "postgresql://"):
             if v.startswith(prefix):
-                return "postgresql+asyncpg://" + v[len(prefix):]
+                return "postgresql+asyncpg://" + v[len(prefix) :]
         return v
 
     @field_validator("CLINIC_TIMEZONE")

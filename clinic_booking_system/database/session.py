@@ -19,19 +19,19 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import NullPool
 
 
 def _make_session_factory() -> async_sessionmaker[AsyncSession]:
     """Create and return the sessionmaker, reading settings on first call."""
     from clinic_booking_system.core.config import get_settings
+
     settings = get_settings()
     engine = create_async_engine(
         settings.DATABASE_URL,
         # Echo SQL only in local/debug mode, not in production.
         echo=(settings.APP_ENV == "local"),
         future=True,
-        #poolclass=NullPool, i added this after  integration tests failed. use in testing, avoid in production
+        # poolclass=NullPool, i added this after  integration tests failed. use in testing, avoid in production
     )
     return async_sessionmaker(
         engine,
