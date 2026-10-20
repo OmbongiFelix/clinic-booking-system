@@ -68,8 +68,8 @@ async def session(engine):
         bind=connection,
         expire_on_commit=False,
         class_=AsyncSession,
-        #join_transaction_mode="create_savepoint",  # DO NOT USE IN PRODUCTION. Prevents test commits from hitting the DB. 
-    )
+        join_transaction_mode="create_savepoint",
+        )
     async with session_factory() as s:
         yield s
         await s.rollback() # Ensures clean state for the next test
@@ -123,6 +123,28 @@ async def seeded_db(session):
     await session.flush()
     return {"doctor_id": doctor_id, "patient_id": patient_id}
 
+
+@pytest_asyncio.fixture()
+async def committed_seed(engine):
+    from sqlalchemy import text
+    async with engine.begin() as conn:  # commits on exit
+        doctor_id = (await conn.execute(text(
+            "INSERT INTO doctors (fullname, is_active) VALUES ('Dr. Race', true) RETURNING id"
+        ))).scalar_one()
+        for wd in range(5):
+            await conn.execute(text(
+                "INSERT INTO doctor_working_hours (doctor_id, weekday, start_time, end_time) "
+                "VALUES (:d, :w, '09:00', '17:00')"), {"d": doctor_id, "w": wd})
+        patient_id = (await conn.execute(text(
+            "INSERT INTO patients (fullname, email, phone) "
+            "VALUES ('Race Patient', 'race@example.com', '+1234567891') RETURNING id"
+        ))).scalar_one()
+    yield {"doctor_id": doctor_id, "patient_id": patient_id}
+    async with engine.begin() as conn:
+        await conn.execute(text("DELETE FROM appointments WHERE doctor_id = :d"), {"d": doctor_id})
+        await conn.execute(text("DELETE FROM doctor_working_hours WHERE doctor_id = :d"), {"d": doctor_id})
+        await conn.execute(text("DELETE FROM doctors WHERE id = :d"), {"d": doctor_id})
+        await conn.execute(text("DELETE FROM patients WHERE id = :p"), {"p": patient_id})
 
 # ---------------------------------------------------------------------------
 # HTTP client fixture

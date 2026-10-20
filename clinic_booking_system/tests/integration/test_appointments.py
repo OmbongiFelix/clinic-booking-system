@@ -452,7 +452,7 @@ class TestHealth:
 class TestConcurrency:
     """Two simultaneous bookings for the same slot: exactly one succeeds (README §17)."""
 
-    async def test_simultaneous_bookings_one_wins(self, seeded_db, engine):
+    async def test_simultaneous_bookings_one_wins(self, committed_seed, engine):
         """Fire two bookings concurrently; exactly one 201 and one 409."""
         from httpx import ASGITransport, AsyncClient
         from clinic_booking_system.core.clock import get_now
@@ -474,18 +474,19 @@ class TestConcurrency:
             return AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
 
         body = {
-            "patient_id": seeded_db["patient_id"],
-            "doctor_id": seeded_db["doctor_id"],
+            "patient_id": committed_seed["patient_id"],
+            "doctor_id": committed_seed["doctor_id"],
             "start_time": "2026-10-23T10:00:00+03:00",  # Friday
         }
 
-        async with await _make_client() as c:
-            results = await asyncio.gather(
-                c.post("/appointments", json=body),
-                c.post("/appointments", json=body),
-            )
-
-        app.dependency_overrides.clear()
+        try:
+            async with await _make_client() as c:
+                results = await asyncio.gather(
+                    c.post("/appointments", json=body),
+                    c.post("/appointments", json=body),
+                )
+        finally:
+            app.dependency_overrides.clear()
 
         statuses = sorted([r.status_code for r in results])
         assert statuses == [201, 409], f"Expected [201, 409], got {statuses}"
