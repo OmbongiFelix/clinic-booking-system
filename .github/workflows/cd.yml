@@ -14,7 +14,7 @@ name: CD
 on:
   push:
     branches: [main]
-    
+
   workflow_dispatch:
 
 jobs:
@@ -66,6 +66,8 @@ jobs:
 
       - name: Deploy to Render
         # Only deploy if tests pass; RENDER_DEPLOY_HOOK_URL is a repository secret..
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
           if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
             echo "RENDER_DEPLOY_HOOK_URL secret is not set"; exit 1
