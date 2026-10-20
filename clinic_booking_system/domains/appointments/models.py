@@ -52,7 +52,7 @@ class Appointment(Base):
         Index("ix_appointments_patient_start", "patient_id", "start_time"),
     )
     # Server-generated timestamps are available right after flush (important for async).
-    __mapper_args__= {"eager_defaults": True}
+    __mapper_args__ = {"eager_defaults": True}
 
     id: Mapped[int] = mapped_column(primary_key=True, init=False)
     doctor_id: Mapped[int] = mapped_column(
