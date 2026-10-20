@@ -13,7 +13,9 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from clinic_booking_system.database.session import get_session
-from clinic_booking_system.domains.appointments.router import router as appointments_router
+from clinic_booking_system.domains.appointments.router import (
+    router as appointments_router,
+)
 
 router = APIRouter()
 

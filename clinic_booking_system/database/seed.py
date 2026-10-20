@@ -54,15 +54,31 @@ for _doctor in _DOCTORS:
         )
 
 _PATIENTS = [
-    {"id": 1, "fullname": "Alice Wanjiru", "email": "alice@example.com", "phone": "+254700000001"},
-    {"id": 2, "fullname": "Bob Otieno", "email": "bob@example.com", "phone": "+254700000002"},
-    {"id": 3, "fullname": "Carol Muthoni", "email": "carol@example.com", "phone": "+254700000003"},
+    {
+        "id": 1,
+        "fullname": "Alice Wanjiru",
+        "email": "alice@example.com",
+        "phone": "+254700000001",
+    },
+    {
+        "id": 2,
+        "fullname": "Bob Otieno",
+        "email": "bob@example.com",
+        "phone": "+254700000002",
+    },
+    {
+        "id": 3,
+        "fullname": "Carol Muthoni",
+        "email": "carol@example.com",
+        "phone": "+254700000003",
+    },
 ]
 
 
 # ---------------------------------------------------------------------------
 # Insert helpers (raw SQL so we can use ON CONFLICT DO NOTHING easily)
 # ---------------------------------------------------------------------------
+
 
 async def _seed(session: AsyncSession) -> None:
     """Insert seed rows; skip rows that already exist (idempotent)."""
@@ -105,14 +121,18 @@ async def _seed(session: AsyncSession) -> None:
     )
 
     await session.commit()
-    logger.info("Seed complete: %d doctors, %d patients.", len(_DOCTORS), len(_PATIENTS))
+    logger.info(
+        "Seed complete: %d doctors, %d patients.", len(_DOCTORS), len(_PATIENTS)
+    )
 
 
 async def main() -> None:
     """Entry point: connect, seed, disconnect."""
     settings = get_settings()
     engine = create_async_engine(settings.DATABASE_URL, echo=False)
-    session_factory = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+    session_factory = async_sessionmaker(
+        engine, expire_on_commit=False, class_=AsyncSession
+    )
     async with session_factory() as session:
         await _seed(session)
     await engine.dispose()

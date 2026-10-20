@@ -11,11 +11,11 @@ from __future__ import annotations
 import asyncio
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
 
 # ── Register all ORM models so their tables appear in Base.metadata ─────────
 import clinic_booking_system.database.models_registry  # noqa: F401
+from alembic import context
 from clinic_booking_system.core.config import get_settings
 from clinic_booking_system.database.db import Base
 

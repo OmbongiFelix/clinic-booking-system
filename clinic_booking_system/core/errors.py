@@ -1,5 +1,6 @@
 from __future__ import annotations
-r"""Domain exceptions and their HTTP mapping"""# core/errors.py
+
+r"""Domain exceptions and their HTTP mapping"""  # core/errors.py
 """Domain exceptions and their HTTP mapping (README §9, §13.6).
 
 Services and pure logic raise these; they never import ``HTTPException``.
@@ -7,7 +8,6 @@ Services and pure logic raise these; they never import ``HTTPException``.
 
     {"error": {"code": "...", "message": "...", "details": {...}}}
 """
-
 
 
 import logging
@@ -26,7 +26,9 @@ class AppError(Exception):
     code: str = "INTERNAL_ERROR"
     default_message: str = "An unexpected error occurred."
 
-    def __init__(self, message: str | None = None, details: dict[str, Any] | None = None):
+    def __init__(
+        self, message: str | None = None, details: dict[str, Any] | None = None
+    ):
         self.message = message or self.default_message
         self.details = details or {}
         super().__init__(self.message)
@@ -42,7 +44,11 @@ class PatientNotFound(AppError):
 
 
 class AppointmentNotFound(AppError):
-    status_code, code, default_message = 404, "APPOINTMENT_NOT_FOUND", "Appointment not found."
+    status_code, code, default_message = (
+        404,
+        "APPOINTMENT_NOT_FOUND",
+        "Appointment not found.",
+    )
 
 
 # ── 409 ──────────────────────────────────────────────────────────────
@@ -58,7 +64,9 @@ class AppointmentAlreadyCancelled(AppError):
 
 class AppointmentAlreadyStarted(AppError):
     status_code, code = 409, "APPOINTMENT_ALREADY_STARTED"
-    default_message = "This appointment has already started and can no longer be changed."
+    default_message = (
+        "This appointment has already started and can no longer be changed."
+    )
 
 
 # ── 422 ──────────────────────────────────────────────────────────────
@@ -88,7 +96,9 @@ class SameSlot(AppError):
 
 
 # ── handlers ─────────────────────────────────────────────────────────
-def _envelope(status: int, code: str, message: str, details: Any = None) -> JSONResponse:
+def _envelope(
+    status: int, code: str, message: str, details: Any = None
+) -> JSONResponse:
     return JSONResponse(
         status_code=status,
         content={"error": {"code": code, "message": message, "details": details or {}}},
@@ -103,10 +113,16 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(RequestValidationError)
     async def _validation(_: Request, exc: RequestValidationError) -> JSONResponse:
         errors = [
-            {"loc": list(e.get("loc", [])), "message": e.get("msg", ""), "type": e.get("type", "")}
+            {
+                "loc": list(e.get("loc", [])),
+                "message": e.get("msg", ""),
+                "type": e.get("type", ""),
+            }
             for e in exc.errors()
         ]
-        return _envelope(422, "REQUEST_VALIDATION", "Invalid request.", {"errors": errors})
+        return _envelope(
+            422, "REQUEST_VALIDATION", "Invalid request.", {"errors": errors}
+        )
 
     @app.exception_handler(StarletteHTTPException)
     async def _http(_: Request, exc: StarletteHTTPException) -> JSONResponse:

@@ -16,7 +16,7 @@ Test cases from the design's minimum case list (README §17):
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -29,14 +29,12 @@ from clinic_booking_system.core.errors import (
 )
 from clinic_booking_system.domains.appointments.scheduling import (
     SLOT_MINUTES,
-    Slot,
     WorkingBlock,
     available_slots,
     block_for_weekday,
     day_bounds_utc,
     generate_slots,
     is_aligned,
-    slot_end,
     validate_start_time,
 )
 
@@ -48,9 +46,11 @@ LEAD = 60  # minutes
 # Helpers / stubs
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class _Hours:
     """Minimal working-hours stub that satisfies the WorkingHoursLike protocol."""
+
     weekday: int
     start_time: time
     end_time: time
@@ -69,6 +69,7 @@ def _aware(year, month, day, hour, minute, tz=TZ) -> datetime:
 # ---------------------------------------------------------------------------
 # generate_slots
 # ---------------------------------------------------------------------------
+
 
 class TestGenerateSlots:
     """Tests for generate_slots: verifies 30-minute grid within a block."""
@@ -110,6 +111,7 @@ class TestGenerateSlots:
 # is_aligned
 # ---------------------------------------------------------------------------
 
+
 class TestIsAligned:
     def test_aligned_on_hour(self):
         dt = _aware(2026, 10, 20, 9, 0)
@@ -132,6 +134,7 @@ class TestIsAligned:
 # block_for_weekday
 # ---------------------------------------------------------------------------
 
+
 class TestBlockForWeekday:
     def test_returns_block_for_working_day(self):
         block = block_for_weekday(_mon_fri_hours(), 0)  # Monday
@@ -147,6 +150,7 @@ class TestBlockForWeekday:
 # ---------------------------------------------------------------------------
 # day_bounds_utc
 # ---------------------------------------------------------------------------
+
 
 class TestDayBoundsUtc:
     def test_start_is_midnight_local(self):
@@ -179,28 +183,38 @@ class TestValidateStartTime:
     def test_valid_slot(self):
         """A well-formed future slot should pass without raising."""
         start = _aware(2026, 10, 20, 10, 0)  # 10:00 Tue, 2 h after now
-        validate_start_time(start, working_hours=_HOURS, now=_NOW, lead_minutes=LEAD, tz=TZ)
+        validate_start_time(
+            start, working_hours=_HOURS, now=_NOW, lead_minutes=LEAD, tz=TZ
+        )
 
     def test_misaligned_raises(self):
         start = _aware(2026, 10, 20, 10, 15)  # not on :00/:30
         with pytest.raises(SlotMisaligned):
-            validate_start_time(start, working_hours=_HOURS, now=_NOW, lead_minutes=LEAD, tz=TZ)
+            validate_start_time(
+                start, working_hours=_HOURS, now=_NOW, lead_minutes=LEAD, tz=TZ
+            )
 
     def test_non_working_weekday_raises(self):
         start = _aware(2026, 10, 18, 10, 0)  # 2026-10-18 is a Sunday
         with pytest.raises(SlotOutsideWorkingHours):
-            validate_start_time(start, working_hours=_HOURS, now=_NOW, lead_minutes=LEAD, tz=TZ)
+            validate_start_time(
+                start, working_hours=_HOURS, now=_NOW, lead_minutes=LEAD, tz=TZ
+            )
 
     def test_before_working_hours_raises(self):
         start = _aware(2026, 10, 20, 8, 30)  # before 09:00
         with pytest.raises(SlotOutsideWorkingHours):
-            validate_start_time(start, working_hours=_HOURS, now=_NOW, lead_minutes=LEAD, tz=TZ)
+            validate_start_time(
+                start, working_hours=_HOURS, now=_NOW, lead_minutes=LEAD, tz=TZ
+            )
 
     def test_slot_ending_after_close_raises(self):
         """A slot starting at 16:45 would end at 17:15, outside hours."""
         start = _aware(2026, 10, 20, 16, 30)
         # slot ends at 17:00 — this is valid (slot_end <= close)
-        validate_start_time(start, working_hours=_HOURS, now=_NOW, lead_minutes=LEAD, tz=TZ)
+        validate_start_time(
+            start, working_hours=_HOURS, now=_NOW, lead_minutes=LEAD, tz=TZ
+        )
 
         start_too_late = _aware(2026, 10, 20, 17, 0)
         # slot would end at 17:30 — outside hours
@@ -222,24 +236,31 @@ class TestValidateStartTime:
         now = _aware(2026, 10, 20, 9, 0)
         start = _aware(2026, 10, 20, 9, 30)  # only 30 min ahead
         with pytest.raises(SlotTooSoon):
-            validate_start_time(start, working_hours=_HOURS, now=now, lead_minutes=LEAD, tz=TZ)
+            validate_start_time(
+                start, working_hours=_HOURS, now=now, lead_minutes=LEAD, tz=TZ
+            )
 
     def test_exactly_at_lead_time_boundary_is_allowed(self):
         """A slot exactly ``lead_minutes`` ahead must be accepted (A5: boundary is inclusive)."""
         now = _aware(2026, 10, 20, 9, 0)
         start = _aware(2026, 10, 20, 10, 0)  # exactly 60 minutes ahead
         # Should not raise
-        validate_start_time(start, working_hours=_HOURS, now=now, lead_minutes=LEAD, tz=TZ)
+        validate_start_time(
+            start, working_hours=_HOURS, now=now, lead_minutes=LEAD, tz=TZ
+        )
 
     def test_naive_start_raises_value_error(self):
         naive = datetime(2026, 10, 20, 10, 0)  # no tzinfo
         with pytest.raises(ValueError):
-            validate_start_time(naive, working_hours=_HOURS, now=_NOW, lead_minutes=LEAD, tz=TZ)
+            validate_start_time(
+                naive, working_hours=_HOURS, now=_NOW, lead_minutes=LEAD, tz=TZ
+            )
 
 
 # ---------------------------------------------------------------------------
 # available_slots
 # ---------------------------------------------------------------------------
+
 
 class TestAvailableSlots:
     def _now(self):

@@ -8,8 +8,8 @@ where the service can translate it (README §14.1).
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import datetime
-from typing import Sequence
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,7 +21,9 @@ class AppointmentRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def get(self, appointment_id: int, *, for_update: bool = False) -> Appointment | None:
+    async def get(
+        self, appointment_id: int, *, for_update: bool = False
+    ) -> Appointment | None:
         """Fetch by id. ``for_update`` takes a row lock (SELECT ... FOR UPDATE) so the
         status check and the change are consistent under concurrency (README §16)."""
         stmt = select(Appointment).where(Appointment.id == appointment_id)

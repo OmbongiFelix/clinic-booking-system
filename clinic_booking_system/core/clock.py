@@ -6,11 +6,11 @@ Routers take ``now: datetime = Depends(get_now)``. Tests override it with
 (past, lead time, already started) are deterministic.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def get_now() -> datetime:

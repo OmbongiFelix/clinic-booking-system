@@ -8,9 +8,10 @@ the 30-minute grid, the past, and the minimum lead time (README A3, A5, A6).
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta, timezone
-from typing import Iterable, Protocol
+from datetime import UTC, date, datetime, time, timedelta
+from typing import Protocol
 from zoneinfo import ZoneInfo
 
 from clinic_booking_system.core.errors import (
@@ -64,23 +65,29 @@ def _require_aware(value: datetime, name: str) -> None:
 
 def is_aligned(start: datetime, tz: ZoneInfo) -> bool:
     local = start.astimezone(tz)
-    return local.minute % SLOT_MINUTES == 0 and local.second == 0 and local.microsecond == 0
+    return (
+        local.minute % SLOT_MINUTES == 0
+        and local.second == 0
+        and local.microsecond == 0
+    )
 
 
 def day_bounds_utc(day: date, tz: ZoneInfo) -> tuple[datetime, datetime]:
     """[start, end) of a clinic-local calendar day, as UTC instants."""
     start = datetime.combine(day, time.min, tzinfo=tz)
     end = datetime.combine(day + timedelta(days=1), time.min, tzinfo=tz)
-    return start.astimezone(timezone.utc), end.astimezone(timezone.utc)
+    return start.astimezone(UTC), end.astimezone(UTC)
 
 
 def generate_slots(day: date, block: WorkingBlock, tz: ZoneInfo) -> list[Slot]:
     """All 30-minute slots that fit inside the block on ``day`` (clinic local)."""
-    cursor = datetime.combine(day, block.start, tzinfo=tz).astimezone(timezone.utc)
-    close = datetime.combine(day, block.end, tzinfo=tz).astimezone(timezone.utc)
+    cursor = datetime.combine(day, block.start, tzinfo=tz).astimezone(UTC)
+    close = datetime.combine(day, block.end, tzinfo=tz).astimezone(UTC)
     slots: list[Slot] = []
     while cursor + SLOT_DURATION <= close:
-        slots.append(Slot(cursor.astimezone(tz), (cursor + SLOT_DURATION).astimezone(tz)))
+        slots.append(
+            Slot(cursor.astimezone(tz), (cursor + SLOT_DURATION).astimezone(tz))
+        )
         cursor += SLOT_DURATION
     return slots
 
@@ -138,6 +145,7 @@ def available_slots(
     earliest = now + timedelta(minutes=lead_minutes)
     taken = set(booked_starts)
     return [
-        s for s in generate_slots(day, block, tz)
+        s
+        for s in generate_slots(day, block, tz)
         if s.start_time >= earliest and s.start_time not in taken
     ]

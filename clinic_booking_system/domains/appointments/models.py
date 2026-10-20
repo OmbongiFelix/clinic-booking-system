@@ -14,7 +14,7 @@ The 30-minute duration is a code constant (scheduling.SLOT_MINUTES), so no end_t
 """
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -55,14 +55,20 @@ class Appointment(Base):
     __mapper_args__ = {"eager_defaults": True}
 
     id: Mapped[int] = mapped_column(primary_key=True, init=False)
-    doctor_id: Mapped[int] = mapped_column(ForeignKey("doctors.id", ondelete="RESTRICT"))
-    patient_id: Mapped[int] = mapped_column(ForeignKey("patients.id", ondelete="RESTRICT"))
-    start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))  # always UTC-aware
+    doctor_id: Mapped[int] = mapped_column(
+        ForeignKey("doctors.id", ondelete="RESTRICT")
+    )
+    patient_id: Mapped[int] = mapped_column(
+        ForeignKey("patients.id", ondelete="RESTRICT")
+    )
+    start_time: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True)
+    )  # always UTC-aware
 
     status: Mapped[str] = mapped_column(String(20), default=STATUS_BOOKED)
     # 500 chars to match the API limit (README §13.3); was 255.
-    cancellation_reason: Mapped[Optional[str]] = mapped_column(String(500), default=None)
-    cancelled_at: Mapped[Optional[datetime]] = mapped_column(
+    cancellation_reason: Mapped[str | None] = mapped_column(String(500), default=None)
+    cancelled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), default=None
     )
 
