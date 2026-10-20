@@ -1,22 +1,56 @@
-# CI workflow: run lint and tests on every pull request to main (README §18.2, R12).
+# CI workflow: run lint and tests on every pull request to main and on pushes to main
+# (README §18.2, R12).
 #
-# Steps:
-# 1. Check out the repository.
-# 2. Install Python and uv.
-# 3. Install all dependencies (including dev group) from the lockfile.
-# 4. Run the PostgreSQL service container used by integration tests.
-# 5. Apply database migrations.
-# 6. Run the full test suite with pytest.
+# Jobs:
+# - lint: ruff check and format check (no database needed).
+# - test: runs in parallel with lint and does the following:
+#   1. Check out the repository.
+#   2. Install Python and uv.
+#   3. Install all dependencies (including dev group) from the lockfile.
+#   4. Run the PostgreSQL service container used by integration tests.
+#   5. Apply database migrations.
+#   6. Run the full test suite with pytest.
 
 name: CI
 
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+      - name: Ruff format check
+        run: uv run ruff format --check .
+
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     services:
       postgres:
@@ -51,6 +85,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
       - name: Install dependencies
         run: uv sync --locked
