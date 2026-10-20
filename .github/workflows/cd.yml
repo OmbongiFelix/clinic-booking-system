@@ -14,6 +14,8 @@ name: CD
 on:
   push:
     branches: [main]
+    
+  workflow_dispatch:
 
 jobs:
   test-and-deploy:
@@ -64,12 +66,22 @@ jobs:
 
       - name: Deploy to Render
         # Only deploy if tests pass; RENDER_DEPLOY_HOOK_URL is a repository secret..
-        run: curl -s "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "RENDER_DEPLOY_HOOK_URL secret is not set"; exit 1
+          fi
+          curl -fsS -X POST "$RENDER_DEPLOY_HOOK_URL"
 
       - name: Smoke test — poll /health
         # Poll the live URL until the service is up (up to 3 minutes).
         # PUBLIC_URL is set as a repository variable (Settings → Variables).
+        env:
+          PUBLIC_URL: ${{ vars.PUBLIC_URL }}
         run: |
+          if [ -z "$PUBLIC_URL" ]; then
+            echo "PUBLIC_URL variable is not set"; exit 1
+          fi
+          URL="${PUBLIC_URL%/}/health"
           echo "Waiting for deployment to be healthy..."
           for i in $(seq 1 18); do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ vars.PUBLIC_URL }}/health" || true)
